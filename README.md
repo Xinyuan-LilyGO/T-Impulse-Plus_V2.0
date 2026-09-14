@@ -213,11 +213,6 @@ Use identical parameters on the transmitter and receiver:
 | TCXO | 3.0 V |
 | Regulator | DC-DC |
 
-The V1 SX126x_PingPong reference uses 868.6 MHz, SF9, and preamble 16, so it
-is not compatible with the V2 defaults without changing both ends. The
-T-Deck-MAX example is for a different board and its pin/RF settings are not a
-V2 reference.
-
 ## Reference initialization order
 
 v2_bringup is the reference for the real V2 startup and peripheral handoff
@@ -353,6 +348,8 @@ example in parallel with a standalone LoRa example on the same board.
 ## FAQ
 
 ### Why is there no serial output?
+
+Please enable the "DTR" option in your serial assistant software.
 
 Open the monitor at 115200 before resetting or reconnecting USB. Check USB
 CDC, VBUS, MCU power, reset, and the selected PlatformIO environment. The
