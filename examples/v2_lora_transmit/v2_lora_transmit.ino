@@ -11,6 +11,8 @@
 
 static constexpr uint32_t SERIAL_BAUD = 115200UL;
 static constexpr uint32_t POWER_SETTLE_TIME_MS = 100UL;
+static constexpr uint32_t LORA_IRQ_POLL_INTERVAL_MS = 20UL;
+static constexpr uint32_t LORA_TRANSMIT_TIMEOUT_MS = 15000UL;
 static constexpr uint32_t LORA_TRANSMIT_INTERVAL_MS = 5000UL;
 static constexpr size_t LORA_PAYLOAD_BUFFER_SIZE = 96;
 
@@ -140,6 +142,7 @@ static bool Initialize_LoRa()
 
     Serial.println("[Stage] Main I2C released; starting NRF_SPIM3");
     Custom_SPI.begin();
+    Custom_SPI.setClockDivider(SPI_CLOCK_DIV2);
     Serial.println("[SX1262] Parameters 868.0MHz/125kHz/SF10/CR4/6/sync=0xAB/22dBm/preamble=15/CRC=off/TCXO=3.0V/DC-DC");
 
     int16_t state = radio.begin(868.0, 125.0, 10, 6, 0xAB, 22, 15, 3.0, false);
@@ -206,14 +209,54 @@ static bool Transmit_Test_Packet()
     Serial.printf("[SX1262] Transmitting seq=%lu payload=\"%s\"\r\n",
                   static_cast<unsigned long>(sequence),
                   payload);
-    const int16_t state = radio.transmit(payload);
-    if (!Check_Radio_State("Transmit", state))
+
+    // DIO1 is shared with the board's main-I2C SCL net. Start the packet
+    // without installing an interrupt callback and read TX_DONE over SPI.
+    const int16_t startState = radio.startTransmit(payload);
+    if (!Check_Radio_State("Start transmit", startState))
     {
         return false;
     }
 
-    Serial.printf("[SX1262] Transmit successful seq=%lu\r\n",
-                  static_cast<unsigned long>(sequence));
+    const uint32_t startedMs = millis();
+    uint32_t irqFlags = 0;
+    bool transmitDone = false;
+    while (millis() - startedMs < LORA_TRANSMIT_TIMEOUT_MS)
+    {
+        irqFlags = radio.getIrqFlags();
+        if ((irqFlags & RADIOLIB_SX126X_IRQ_TX_DONE) != 0)
+        {
+            transmitDone = true;
+            break;
+        }
+        delay(LORA_IRQ_POLL_INTERVAL_MS);
+    }
+
+    if (!transmitDone)
+    {
+        Serial.printf("[SX1262] Transmit timeout after %lu ms, irq=0x%08lX\r\n",
+                      static_cast<unsigned long>(millis() - startedMs),
+                      static_cast<unsigned long>(irqFlags));
+        const int16_t cleanupState = radio.finishTransmit();
+        if (cleanupState != RADIOLIB_ERR_NONE)
+        {
+            Serial.printf("[SX1262] Transmit cleanup failed, RadioLib error code=%d\r\n",
+                          cleanupState);
+        }
+        Shutdown_LoRa_Transmit();
+        Next_Failure_Report_Ms = millis();
+        return false;
+    }
+
+    const int16_t finishState = radio.finishTransmit();
+    if (!Check_Radio_State("Finish transmit", finishState))
+    {
+        return false;
+    }
+
+    Serial.printf("[SX1262] Transmit successful seq=%lu irq=0x%08lX\r\n",
+                  static_cast<unsigned long>(sequence),
+                  static_cast<unsigned long>(irqFlags));
     return true;
 }
 

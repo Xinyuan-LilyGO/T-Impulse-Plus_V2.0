@@ -4,6 +4,8 @@
 
 This standalone example validates SX1262 transmission on the V2 board. It ends `Wire`, releases main-I2C `SDA=P1.08` and `SCL=P0.11`, and then starts the radio on `NRF_SPIM3`. It does not initialize the charger, IMU, screen, GNSS, or other main-I2C devices.
 
+Because `DIO1=P0.11` is also the main-I2C SCL net, transmission completion is read from the SX1262 IRQ status over SPI. The example uses `startTransmit()`, waits for `RADIOLIB_SX126X_IRQ_TX_DONE`, and then calls `finishTransmit()`; it does not use the blocking `transmit()` helper or a DIO1 callback.
+
 The radio uses `868.0 MHz`, `125 kHz`, `SF10`, coding rate `4/6`, sync word `0xAB`, `22 dBm`, preamble `15`, CRC disabled, `3.0 V` TCXO, and the DC-DC regulator. The V2 radio pins are CS=`P0.29`, RST=`P0.03`, SCLK=`P1.14`, MOSI=`P0.28`, MISO=`P0.30`, BUSY=`P1.12`, DIO1=`P0.11`, DIO2=`P0.31`, RF_VC1=`P1.13`, and RF_VC2=`P1.10`.
 
 ## Serial test
@@ -17,12 +19,14 @@ Use a suitable antenna or the required `50 ohm` load during RF testing. Do not c
 - The log shows the serial port, the `RT9080_EN=P0.19` high-low-high sequence, and main-I2C release before `NRF_SPIM3` starts.
 - SX1262 initialization succeeds with the parameters listed above.
 - A payload such as `T-Impulse-Plus V2 TX seq=12 uptime_ms=60000` is sent every five seconds.
-- Each successful transmission reports its sequence number. The sequence increments even if a transmission attempt fails.
+- Each successful transmission reports its sequence number and the observed IRQ flags. The sequence increments even if a transmission attempt fails.
 
 ## Failure diagnosis
 
 - Initialization or transmission failure prints the stage and the RadioLib error code, then clears the DIO1 callback, ends SPI, and releases the radio pins.
+- A transmit timeout prints the last SPI-polled IRQ flags, calls `finishTransmit()` for cleanup, and releases the radio resources.
 - No receiver packet: verify both radios use the same frequency, bandwidth, spreading factor, coding rate, sync word, preamble, CRC setting, and antenna/load.
+- The V1 `SX126x_PingPong` example uses `868.6 MHz`, `SF9`, and preamble `16`, so it is not compatible with this V2 transmitter's `868.0 MHz`, `SF10`, and preamble `15` defaults. Use `v2_lora_receive` or configure both ends identically.
 - SPI or BUSY errors: inspect the V2 CS, SCLK, MOSI, MISO, BUSY, reset, and power connections.
 - Main-I2C failures in another example: run this transmitter separately because `DIO1=P0.11` shares the main-I2C SCL net.
 
