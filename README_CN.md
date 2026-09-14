@@ -6,7 +6,7 @@
  * @License: GPL 3.0
 -->
 
-<h1 align="center">T-Impulse-Plus</h1>
+<h1 align="center">T-Impulse-Plus V2.0</h1>
 
 <p align="center" width="100%">
     <img src="image/3.jpg" alt="T-Impulse-Plus">
@@ -27,13 +27,12 @@ v2_bringup 是已经测试过的 V2 初始化顺序参考程序。其余 v2_* �
 | 基线 | 状态 | 范围 |
 | --- | --- | --- |
 | V2 硬件调试例程 | 当前使用 | 17 个单点或综合 PlatformIO 环境 |
-| T-Impulse-Plus V1.0 固件和 bootloader 文件 | 旧版/参考 | 保留在 firmware/ 和 bootloader/ 下的预编译文件 |
 
 ## 产品信息
 
 | 产品 | MCU | Flash | RAM | 购买链接 |
 | --- | --- | --- | --- | --- |
-| T-Impulse-Plus | nRF52840 | 1 MB | 256 KB | 暂无 |
+| T-Impulse-Plus V2| nRF52840 | 1 MB | 256 KB | 暂无 |
 
 ## 目录
 
@@ -50,7 +49,7 @@ v2_bringup 是已经测试过的 V2 初始化顺序参考程序。其余 v2_* �
 
 ## 概述
 
-T-Impulse-Plus 是一款基于 nRF52840 的低功耗手环，板载 OLED 屏幕、
+T-Impulse-Plus V2 是一款基于 nRF52840 的低功耗手环，板载 OLED 屏幕、
 SX1262 LoRa 射频模块、MIA-M10Q GNSS 模块、ICM20948 惯性传感器、
 QSPI Flash、TTP223 触摸输入、SGM41562 电源管理芯片，以及由 RT9080
 控制的 3.3 V 电源轨。
@@ -335,17 +334,6 @@ v2_lora_transmit，先启动接收端。两块板必须使用 LoRa 参数表中�
 直接连接到接收端输入。同一块板上不要让主 I2C 例程与独立 LoRa 例程并行
 运行。
 
-## 旧版文件与工程资料
-
-- [bootloader](./bootloader/)：预编译 bootloader 镜像。
-- [firmware](./firmware/)：旧版 V1.0 出厂和认证镜像，不是 V2 调试例程的
-  当前源码。
-- [V1 到 V2 修复报告](./docs/superpowers/T-Impulse%20Plus_V1_to_V2_repair_report.md)：
-  记录引脚、初始化顺序和共线网络的判断。
-- [V2 原理图](./project/T-Impulse%20Plus.pdf)：硬件参考。
-- [libraries/private_library/pin_config.h](./libraries/private_library/pin_config.h)：
-  软件引脚定义权威文件。
-
 ## 常见问题
 
 ### 为什么没有串口输出？
@@ -353,25 +341,6 @@ v2_lora_transmit，先启动接收端。两块板必须使用 LoRa 参数表中�
 以 115200 打开串口监视器，并在复位或重新连接 USB 前先打开监视器。检查
 USB CDC、VBUS、MCU 电源、复位和选中的 PlatformIO 环境。单点例程的 USB
 等待是有限的，监视器打开过晚仍可能错过最初几行日志。
-
-### 为什么 LoRa 接收不到数据？
-
-确认两端的频率、带宽、扩频因子、编码率、同步字、前导码、CRC 设置和
-天线/负载全部一致。V2 默认值是 868.0 MHz、125 kHz、SF10、CR4/6、
-同步字 0xAB、前导码 15、关闭 CRC。还要确认接收端使用 V2 兼容例程，
-并且启动射频前已经释放主 I2C。
-
-### V2 有 GPS_1PPS 吗？
-
-当前引脚图没有独立 PPS 输入。GPS_1PPS 只是 GPS_EN=P0.24 的历史别名。
-v2_gnss_pps_test 只能用于检查 GPS_EN 控制网络，GPS_VDD 需要使用外部
-仪器测量。
-
-### 为什么电池电压不正确？
-
-分压开关控制脚是 P0.17，ADC 是 P0.05。电池例程使用 3.0 V 内部参考、
-12 位 ADC 和 2.0 倍换算系数。请检查分压网络和电池端电压，并使用万用表
-进行对照；软件日志不能替代仪器测量。
 
 ### 为什么直接用 USB 烧录失败？
 
