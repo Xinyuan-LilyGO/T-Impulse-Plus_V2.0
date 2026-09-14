@@ -7,10 +7,6 @@
 -->
 <h1 align="center">T-Impulse-Plus V2.0</h1>
 
-<p align="center" width="100%">
-    <img src="image/3.jpg" alt="T-Impulse-Plus">
-</p>
-
 ## English | [Chinese](./README_CN.md)
 
 ## Current baseline
