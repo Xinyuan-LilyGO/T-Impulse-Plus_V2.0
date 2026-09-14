@@ -5,7 +5,7 @@
  * @LastEditTime: 2026-09-14
  * @License: GPL 3.0
 -->
-<h1 align="center">T-Impulse-Plus</h1>
+<h1 align="center">T-Impulse-Plus V2.0</h1>
 
 <p align="center" width="100%">
     <img src="image/3.jpg" alt="T-Impulse-Plus">
@@ -29,13 +29,12 @@ GNSS power.
 | Baseline | Status | Scope |
 | --- | --- | --- |
 | V2 hardware debug examples | Current | 17 focused or integrated PlatformIO environments |
-| T-Impulse-Plus V1.0 firmware and bootloader assets | Legacy/reference | Prebuilt images and historical resources under firmware/ and bootloader/ |
 
 ## Product information
 
 | Product | MCU | Flash | RAM | Purchase link |
 | --- | --- | --- | --- | --- |
-| T-Impulse-Plus | nRF52840 | 1 MB | 256 KB | N/A |
+| T-Impulse-Plus V2 | nRF52840 | 1 MB | 256 KB | N/A |
 
 ## Contents
 
@@ -52,7 +51,7 @@ GNSS power.
 
 ## Overview
 
-T-Impulse-Plus is a low-power wristband based on the nRF52840. The board
+T-Impulse-Plus V2 is a low-power wristband based on the nRF52840. The board
 includes an OLED display, SX1262 LoRa radio, MIA-M10Q GNSS module, ICM20948
 inertial sensor, QSPI Flash, TTP223 touch input, SGM41562 power-management IC,
 and an RT9080-controlled 3.3 V rail.
@@ -355,17 +354,6 @@ Use an antenna, a suitable 50 ohm load, or an RF test fixture. Never connect
 a transmitter output directly to a receiver input. Do not run a main-I2C
 example in parallel with a standalone LoRa example on the same board.
 
-## Legacy assets and project files
-
-- [bootloader](./bootloader/) contains prebuilt bootloader images.
-- [firmware](./firmware/) contains legacy V1.0 factory and certification
-  images. These images are not the source for the V2 debug examples.
-- [V1 to V2 repair report](./docs/superpowers/T-Impulse%20Plus_V1_to_V2_repair_report.md)
-  records the pin, initialization, and shared-net decisions.
-- [V2 schematic](./project/T-Impulse%20Plus.pdf) is the hardware reference.
-- [libraries/private_library/pin_config.h](./libraries/private_library/pin_config.h)
-  is the software pin-map authority.
-
 ## FAQ
 
 ### Why is there no serial output?
@@ -374,27 +362,6 @@ Open the monitor at 115200 before resetting or reconnecting USB. Check USB
 CDC, VBUS, MCU power, reset, and the selected PlatformIO environment. The
 focused examples bound their USB wait; a late monitor connection can still
 miss the first startup lines.
-
-### Why does the LoRa receiver get no packet?
-
-Use the same frequency, bandwidth, spreading factor, coding rate, sync word,
-preamble, CRC setting, and antenna/load at both ends. The V2 defaults are
-868.0 MHz, 125 kHz, SF10, CR4/6, sync 0xAB, preamble 15, and CRC disabled.
-Also make sure the receiver is a V2-compatible example and that main I2C is
-released before radio startup.
-
-### Is GPS_1PPS available on V2?
-
-No independent PPS input is defined in the current pin map. GPS_1PPS is a
-legacy alias for GPS_EN=P0.24. Use v2_gnss_pps_test only to check the
-GPS_EN control net and measure GPS_VDD externally.
-
-### Why does the battery voltage look wrong?
-
-The divider switch is P0.17 and the ADC is P0.05. The battery example uses a
-3.0 V internal reference, 12-bit ADC, and a scale factor of 2.0. Confirm the
-divider and battery terminal with a multimeter; software output is not an
-instrument measurement.
 
 ### Why does direct USB programming fail?
 
