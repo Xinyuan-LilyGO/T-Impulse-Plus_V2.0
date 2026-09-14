@@ -8,10 +8,6 @@
 
 <h1 align="center">T-Impulse-Plus V2.0</h1>
 
-<p align="center" width="100%">
-    <img src="image/3.jpg" alt="T-Impulse-Plus">
-</p>
-
 ## [English](./README.md) | 中文
 
 ## 当前基线
