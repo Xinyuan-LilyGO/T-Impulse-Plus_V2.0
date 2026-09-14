@@ -1,309 +1,402 @@
 <!--
- * @Description: None
+ * @Description: T-Impulse-Plus V2 hardware debug documentation
  * @Author: LILYGO_L
  * @Date: 2023-09-11 16:13:14
- * @LastEditTime: 2026-05-05 13:49:56
+ * @LastEditTime: 2026-09-14
  * @License: GPL 3.0
 -->
-<h1 align = "center">T-Impulse-Plus</h1>
+<h1 align="center">T-Impulse-Plus</h1>
 
 <p align="center" width="100%">
-    <img src="image/3.jpg" alt="">
+    <img src="image/3.jpg" alt="T-Impulse-Plus">
 </p>
 
-## **English | [中文](./README_CN.md)**
+## English | [Chinese](./README_CN.md)
 
-## Version iteration:
-| Version                              | Update date                       |
-| :-------------------------------: | :-------------------------------: |
-| T-Impulse-Plus_V1.0            | 2025-06-18                         |
+## Current baseline
 
-## PurchaseLink
-| Product                     | SOC           |  FLASH  |  PSRAM   | Link                   |
-| :------------------------: | :-----------: |:-------: | :---------: | :------------------: |
-| T-Impulse-Plus_V1.0   | nRF52840 |   1M   |256kB| NULL |
+This repository currently targets the T-Impulse-Plus V2 hardware debug
+baseline. The nRF52840 remains the MCU, but the V2 pin map, peripheral
+ownership, power-up sequence, and LoRa/I2C resource handoff are different from
+the original V1 examples.
 
-## Directory
-- [Describe](#describe)
-- [Preview](#preview)
-- [Module](#module)
-- [SoftwareDeployment](#SoftwareDeployment)
-- [V2DebugExamples](#v2-debug-examples)
-- [PinOverview](#pinoverview)
-- [RelatedTests](#RelatedTests)
+The integrated v2_bringup example is the tested reference for the V2
+initialization order. The other v2_* examples are focused diagnostics that
+initialize only the hardware under test. A successful serial log does not
+replace external measurements of power rails, battery voltage, RF output, or
+GNSS power.
+
+| Baseline | Status | Scope |
+| --- | --- | --- |
+| V2 hardware debug examples | Current | 17 focused or integrated PlatformIO environments |
+| T-Impulse-Plus V1.0 firmware and bootloader assets | Legacy/reference | Prebuilt images and historical resources under firmware/ and bootloader/ |
+
+## Product information
+
+| Product | MCU | Flash | RAM | Purchase link |
+| --- | --- | --- | --- | --- |
+| T-Impulse-Plus | nRF52840 | 1 MB | 256 KB | N/A |
+
+## Contents
+
+- [Overview](#overview)
+- [Hardware modules](#hardware-modules)
+- [V2 hardware pin map](#v2-hardware-pin-map)
+- [LoRa parameters](#lora-parameters)
+- [Reference initialization order](#reference-initialization-order)
+- [V2 examples](#v2-examples)
+- [Setup and flashing](#setup-and-flashing)
+- [Recommended validation order](#recommended-validation-order)
+- [Legacy assets and project files](#legacy-assets-and-project-files)
 - [FAQ](#faq)
-- [Project](#project)
 
-## Describe
+## Overview
 
-The T-Impulse Plus is a low-power wristband developed based on the nRF52840 chip, featuring an optimized power efficiency design. Its minimum deep sleep power consumption can reach 10μA to 40μA (actual power consumption may vary across different boards due to differences in onboard components; the minimum power consumption referenced here is based on engineering boards measured in the LILYGO laboratory). The shutdown power consumption is below 1μA. It is equipped with a range of onboard features, including an inertial sensor, LoRa module, GPS, and more.
+T-Impulse-Plus is a low-power wristband based on the nRF52840. The board
+includes an OLED display, SX1262 LoRa radio, MIA-M10Q GNSS module, ICM20948
+inertial sensor, QSPI Flash, TTP223 touch input, SGM41562 power-management IC,
+and an RT9080-controlled 3.3 V rail.
+
+The V2 examples use English serial logs at 115200 baud. The v2_bringup sketch
+keeps the original integrated-test behavior and naming where required, but
+uses the V2 hardware definition and the V2 resource-ownership rules.
 
 ## Preview
 
-### Actual Product Image
-
-<!-- <p align="center" width="100%">
-    <img src="image/1.jpg" alt="">
+<p align="center" width="100%">
+    <img src="image/3.jpg" alt="T-Impulse-Plus board">
 </p>
 
----
+## Hardware modules
 
-<p align="center" width="100%">
-    <img src="image/2.jpg" alt="">
-</p>
+### MCU
 
----
+- Chip: nRF52840
+- RAM: 256 KB
+- Flash: 1 MB
+- [nRF52840 datasheet](https://docs.nordicsemi.com/bundle/ps_nrf52840/page/keyfeatures_html5.html)
 
-<p align="center" width="100%">
-    <img src="image/3.jpg" alt="">
-</p> -->
+### Display
 
-## Module
+- Type: SSD1315-compatible OLED
+- Resolution: 128 x 64
+- Bus: screen I2C on Wire1
+- Address: 0x3C
+- Pins: SDA=P1.06, SCL=P1.04
+- Libraries: Adafruit_GFX and Adafruit_SSD1306
+- [SSD1315 documentation](./information/SSD1315.pdf)
 
-### 1. MCU
+### LoRa
 
-* Chip: nRF52840
-* RAM: 256kB
-* FLASH: 1MB
-* Related Documentation:
-    >[nRF52840_Datasheet](https://docs.nordicsemi.com/bundle/ps_nrf52840/page/keyfeatures_html5.html)
+- Module: S62F
+- Transceiver: SX1262
+- Bus: SPI on NRF_SPIM3
+- Libraries: RadioLib, Adafruit_BusIO, and Adafruit_SPIFlash
+- [S62F documentation](./information/S62F.pdf)
+- [S62F application note](./information/S62F_ApplicationNote_Ver_D.pdf)
 
-### 2. Display
+The S62F uses AcSiP RF switch control mode A. RF_VC1 and RF_VC2 are direct
+MCU control signals. DIO2 is a separate SX1262 signal and must not be used as
+a replacement for the RF switch controls. The V2 RF switch truth table is
+RF_VC1/RF_VC2 = LOW/HIGH for receive and HIGH/LOW for transmit.
 
-* Resolution: 64x32px
-* Display Type: OLED
-* Driver Chip: SSD1315
-* Bus Communication Protocol: IIC
-* Dependent Libraries:
-    >[Adafruit_BusIO](https://github.com/adafruit/Adafruit_BusIO)  
-    >[Adafruit-GFX-Library](https://github.com/adafruit/Adafruit-GFX-Library)
-* Related Documentation:
-    >[SSD1315](./information/SSD1315.pdf)
+The module uses a 3.0 V TCXO setting and the SX1262 DC-DC regulator mode.
+These settings are part of the V2 examples and must match at both ends of a
+LoRa test.
 
-### 3. LORA
+### GNSS
 
-* Chip Module: S62F
-* Chip: SX1262
-* Bus Communication Protocol: SPI
-* Dependent Libraries:
-    >[RadioLib](https://github.com/jgromes/RadioLib)  
-    >[Adafruit_BusIO](https://github.com/adafruit/Adafruit_BusIO)  
-    >[Adafruit_SPIFlash](https://github.com/adafruit/Adafruit_SPIFlash)
-* Related Documentation:
-    >[S62F](./information/S62F.pdf)
-    >[S62F Application Note](./information/S62F_ApplicationNote_Ver_D.pdf)
+- Module: MIA-M10Q
+- Bus: UART, 38400 8N1
+- Module TX net: P0.02
+- Module RX net: P1.15
+- GNSS power control: GPS_EN=P0.24
+- [MIA-M10Q documentation](./information/MIA-M10Q-00B.pdf)
 
-#### S62F Hardware Configuration
+GPS_EN is active low in the current examples: HIGH keeps the GNSS power
+control disabled and the UART test drives it LOW before receiving data.
+GPS_1PPS is only a legacy alias for P0.24; the V2 board does not define an
+independent PPS input on this net.
 
-> Note: The original details in this section target the V1.0 schematic. In the V2 debug worktree, `RF_VC2=P1.10` and `DIO2=P0.31` are updated, while `DIO1=P0.11` shares the main I2C SCL net. Use the [V1 to V2 repair report](./T-Impulse%20Plus_V1_to_V2_repair_report.md) and each `examples/v2_*` README for the complete V2 pin map.
+### IMU
 
-* RF switch: T-Impulse-Plus uses AcSiP control mode A. The nRF52840 drives `RF_VC1` (`P1.13`) and `RF_VC2` (`P1.10`) directly. `DIO2` (`P0.31`) is routed separately and cannot replace these two control pins. Set `RF_VC1/RF_VC2` to `HIGH/LOW` for transmit and `LOW/HIGH` for receive.
-* TCXO: The embedded 32 MHz TCXO is controlled internally by SX1262 `DIO3`. Set `tcxoVoltage` explicitly to `3.0 V` when initializing the radio.
-* Regulator: `VREG` and `DCC_SW` are connected through a 15 uH inductor. Use the DC-DC regulator mode (`useRegulatorLDO = false`).
+- Chip: ICM20948
+- Bus: main I2C
+- Address: 0x69
+- Pins: SDA=P1.08, SCL=P0.11
+- Interrupt: P0.07
+- [ICM20948 documentation](./information/ICM20948.pdf)
 
-### 4. GPS
+### QSPI Flash
 
-* Chip: MIA-M10Q
-* Bus Communication Protocol: UART
-* Dependent Libraries:
-    >[TinyGPSPlus](https://github.com/mikalhart/TinyGPSPlus)  
-    >[cpp_bus_driver](https://github.com/Llgok/cpp_bus_driver)
-* Related Documentation:
-    >[MIA-M10Q](./information/MIA-M10Q-00B.pdf)
+- Compatible JEDEC IDs include ZD25WQ32C (BA 60 16) and ZD25Q32D (BA 40 16)
+- Bus: QSPI
+- CS=P0.12, SCLK=P0.04, IO0=P0.06, IO1=P1.09, IO2=P0.08, IO3=P0.26
+- Library: Adafruit_SPIFlash
+- Record the JEDEC ID and capacity from v2_flash_test; no separate Flash PDF
+  is included in this repository.
 
-### 5. IMU
+### Touch input
 
-* Chip: ICM20948
-* Bus Communication Protocol: IIC
-* Dependent Libraries:
-    >[ICM20948_WE](https://github.com/wollewald/ICM20948_WE)
-* Related Documentation:
-    >[ICM20948](./information/ICM20948.pdf)
+- Chip: TTP223
+- Q output: P0.15
+- The V2 focused test treats this as an input and applies software debounce.
+  Keep the key confirmation macro disabled until the assembled board is
+  independently checked.
+- [TTP223 documentation](./information/TTP223-BA6-TD.pdf)
 
-### 6. Flash
+### Power and battery
 
-* Compatible chips: ZD25WQ32C (`BA 60 16`) and ZD25Q32D (`BA 40 16`)
-* Bus Communication Protocol: SPI
-* Dependent Libraries:
-    >[Adafruit_BusIO](https://github.com/adafruit/Adafruit_BusIO)  
-    >[Adafruit_SPIFlash](https://github.com/adafruit/Adafruit_SPIFlash)  
-* Related Documentation:
-    >[ZD25WQ32CEIGR](./information/ZD25WQ32CEIGR.pdf)
+- Charger/power-management IC: SGM41562
+- SGM41562 address: 0x03
+- SGM41562 main-I2C pins: SDA=P1.08, SCL=P0.11
+- SGM41562 interrupt: P0.16
+- 3.3 V rail enable: RT9080_EN=P0.19
+- Battery-divider switch control: P0.17
+- Battery ADC: P0.05
+- [SGM41562 documentation](./information/SGMICRO-SGM41562XGTR.pdf)
 
-### 7. Touch Button
+## V2 hardware pin map
 
-* Chip: TTP223
-* Other Notes: Configured for falling edge trigger. This chip is also used as the Bluetooth firmware download trigger button. Usage for Bluetooth firmware download is special: if held down continuously during the power-on stage, the button trigger will not function. To successfully trigger Bluetooth firmware download mode, the RST pin must be pressed first, then after waiting for 1 second, this button must be pressed.
-* Related Documentation:
-    >[TTP223](./information/TTP223-BA6-TD.pdf)
+The authoritative software definitions are in
+[libraries/private_library/pin_config.h](./libraries/private_library/pin_config.h).
+The schematic is available at
+[project/T-Impulse%20Plus.pdf](./project/T-Impulse%20Plus.pdf).
 
-### 8. Power Management IC
+| Function | V2 pin or setting | Notes |
+| --- | --- | --- |
+| Screen I2C | SDA=P1.06, SCL=P1.04 | Wire1, address 0x3C, 128 x 64 |
+| Main I2C | SDA=P1.08, SCL=P0.11 | SCL is shared with SX1262 DIO1 |
+| SX1262 CS | P0.29 | |
+| SX1262 reset | P0.03 | |
+| SX1262 SCLK | P1.14 | NRF_SPIM3 |
+| SX1262 MOSI | P0.28 | |
+| SX1262 MISO | P0.30 | |
+| SX1262 BUSY | P1.12 | |
+| SX1262 DIO1 | P0.11 | Shared physical net with main-I2C SCL |
+| SX1262 DIO2 | P0.31 | |
+| SX1262 RF_VC1 | P1.13 | RF switch control |
+| SX1262 RF_VC2 | P1.10 | RF switch control |
+| Flash CS | P0.12 | QSPI |
+| Flash SCLK | P0.04 | QSPI |
+| Flash IO0 | P0.06 | QSPI |
+| Flash IO1 | P1.09 | QSPI |
+| Flash IO2 | P0.08 | QSPI |
+| Flash IO3 | P0.26 | QSPI |
+| GNSS module TX net | P0.02 | Used as the module TX side of Serial2 |
+| GNSS module RX net | P1.15 | Used as the module RX side of Serial2 |
+| GPS_EN | P0.24 | GPS_1PPS is only a legacy alias |
+| ICM20948 interrupt | P0.07 | |
+| SGM41562 interrupt | P0.16 | |
+| TTP223 Q | P0.15 | |
+| Vibration motor | P0.22 | Active-high pulse output |
+| RT9080 enable | P0.19 | |
+| Battery control / ADC | P0.17 / P0.05 | P0.17 switches the divider |
 
-* Chip: SGM41562
-* Other Notes: This chip is used for main power switch control.
-* Dependent Libraries:
-    > [cpp_bus_driver](https://github.com/Llgok/cpp_bus_driver)
-* Related Documentation:
-    >[SGM41562](./information/SGMICRO-SGM41562XGTR.pdf)
+### Shared-net restriction
 
-## SoftwareDeployment
+P0.11 is physically both main-I2C SCL and SX1262 DIO1. Main I2C and LoRa
+cannot safely operate in parallel on this board. A LoRa-focused example must
+call Wire.end(), release P1.08 and P0.11, and then start the radio SPI bus.
+When the radio window ends, the radio callback, SPI peripheral, and radio pins
+are released before main I2C is restored.
 
-### Examples Support
+## LoRa parameters
 
-| Example | `[Arduino IDE (Adafruit_nRF52_V1.6.1)]` <br /> `[PlatformIO (nordicnrf52_V10.6.0)]` <br /> Support | Description | Picture |
-| ------  | ------  | ------ | ------ | 
-| [Battery_Measurement](./examples/Battery_Measurement) | <p align="center">![alt text][supported]  |  |  |
-| [BLE_Uart](./examples/BLE_Uart) | <p align="center">![alt text][supported]  |  |  |
-| [Display](./examples/Display) | <p align="center">![alt text][supported]  |  |  |
-| [Display_GPS_BLE_Uart](./examples/Display_GPS_BLE_Uart) | <p align="center">![alt text][supported]  |  |  |
-| [Flash](./examples/Flash) | <p align="center">![alt text][supported]  |  |  |
-| [Flash_Erase](./examples/Flash_Erase) | <p align="center">![alt text][supported]  |  |  |
-| [Flash_Speed_Test](./examples/Flash_Speed_Test) | <p align="center">![alt text][supported]  |  |  |
-| [GPS](./examples/GPS) | <p align="center">![alt text][supported]  |  |  |
-| [gps_2](./examples/gps_2) | <p align="center">![alt text][supported]  |  |  |
-| [GPS_Full](./examples/GPS_Full) | <p align="center">![alt text][supported]  |  |  |
-| [ICM20948](./examples/ICM20948) | <p align="center">![alt text][supported]  |  |  |
-| [IIC_Scan_2](./examples/IIC_Scan_2) | <p align="center">![alt text][supported]  |  |  |
-| [original_test](./examples/original_test) |<p align="center">![alt text][supported]  | Product factory original testing |  |
-| [sgm41562](./examples/sgm41562) | <p align="center">![alt text][supported]  |  |  |
-| [SX126x_PingPong](./examples/SX126x_PingPong) | <p align="center">![alt text][supported]  |  |  |
-| [SX126x_PingPong_2](./examples/SX126x_PingPong_2) | <p align="center">![alt text][supported]  |  |  |
-| [sx126x_tx_continuous_wave](./examples/sx126x_tx_continuous_wave) | <p align="center">![alt text][supported]  |  |  |
-| [ttp223](./examples/ttp223) | <p align="center">![alt text][supported]  |  |  |
+Use identical parameters on the transmitter and receiver:
 
-[supported]: https://img.shields.io/badge/-supported-green "example"
-
-### V2 Debug Examples
-
-The `examples/v2_*` sketches are standalone V2 hardware tests. Each sketch
-keeps the same power-rail startup sequence as `v2_bringup` and initializes
-only the peripheral under test. The V2 LoRa sketches must be run separately
-because `SX1262_DIO1=P0.11` shares the main-I2C SCL net.
-
-| Example | Description |
+| Parameter | V2 value |
 | --- | --- |
-| [v2_bringup](./examples/v2_bringup) | Verified integrated startup order and board-level diagnostics |
-| [v2_power_test](./examples/v2_power_test) | RT9080 3.3 V rail and battery ADC smoke test |
-| [v2_screen_test](./examples/v2_screen_test) | V2 display I2C address and display test |
+| Frequency | 868.0 MHz |
+| Bandwidth | 125 kHz |
+| Spreading factor | SF10 |
+| Coding rate | 4/6 |
+| Sync word | 0xAB |
+| Output power | 22 dBm |
+| Preamble | 15 symbols |
+| CRC | Disabled |
+| TCXO | 3.0 V |
+| Regulator | DC-DC |
+
+The V1 SX126x_PingPong reference uses 868.6 MHz, SF9, and preamble 16, so it
+is not compatible with the V2 defaults without changing both ends. The
+T-Deck-MAX example is for a different board and its pin/RF settings are not a
+V2 reference.
+
+## Reference initialization order
+
+v2_bringup is the reference for the real V2 startup and peripheral handoff
+order:
+
+1. Start Serial at 115200.
+2. Enable RT9080_EN=P0.19 with HIGH -> LOW -> HIGH transitions and about
+   100 ms between transitions.
+3. Configure screen Wire1 on P1.06/P1.04 and initialize the display at 0x3C.
+   Draw the startup screen and wait about one second.
+4. Wait for native USB CDC for a bounded interval, then print the version
+   banner and diagnostics.
+5. Set TTP223 P0.15 as an input, keep GPS_EN=P0.24 HIGH, and drive the motor
+   P0.22 LOW.
+6. Initialize BLE, then initialize SGM41562.
+7. Access QSPI Flash at 32 MHz: begin transport, send 0xAB to exit deep
+   sleep, begin again to read JEDEC ID/capacity, send 0xB9, call flash.end(),
+   and release all six QSPI pins.
+8. Configure main I2C on P1.08/P0.11 and initialize ICM20948 at 0x69. The
+   integrated setup then puts the IMU to sleep and releases its pins as
+   required by the current application state.
+9. Do not initialize LoRa during normal startup. In the LoRa window, end
+   main I2C and release P0.11 before starting NRF_SPIM3 and SX1262.
+10. In the GNSS window, configure Serial2 on P0.02/P1.15 at 38400 baud and
+    drive GPS_EN LOW before reading GNSS data. On exit, stop Serial2 and
+    return GPS_EN HIGH.
+
+## V2 examples
+
+Every current example directory contains its own README.md with serial
+procedure, expected behavior, and failure diagnosis.
+
+| Example | Purpose |
+| --- | --- |
+| [v2_battery_test](./examples/v2_battery_test) | 16-sample battery-divider ADC statistics for each P0.17 LOW/HIGH state |
+| [v2_ble_test](./examples/v2_ble_test) | nRF52840 internal BLE Nordic UART Service test |
+| [v2_bringup](./examples/v2_bringup) | Tested integrated V2 startup-order and board diagnostic reference |
 | [v2_flash_test](./examples/v2_flash_test) | Read-only QSPI Flash JEDEC ID and capacity test |
-| [v2_main_i2c_test](./examples/v2_main_i2c_test) | Main-I2C line and device-address scan |
-| [v2_sgm41562_test](./examples/v2_sgm41562_test) | SGM41562 identification and status test |
+| [v2_gnss_pps_test](./examples/v2_gnss_pps_test) | GPS_EN/P0.24 control-net test; no independent PPS measurement |
+| [v2_gnss_uart_test](./examples/v2_gnss_uart_test) | 38400-baud GNSS UART and TinyGPSPlus NMEA test |
 | [v2_icm20948_test](./examples/v2_icm20948_test) | ICM20948 accelerometer, gyroscope, and magnetometer test |
-| [v2_battery_test](./examples/v2_battery_test) | Multi-sample battery-divider ADC statistics |
-| [v2_motor_test](./examples/v2_motor_test) | Limited vibration-motor pulse test |
-| [v2_ttp223_test](./examples/v2_ttp223_test) | TTP223 input and debounce test |
-| [v2_gnss_uart_test](./examples/v2_gnss_uart_test) | GNSS UART and TinyGPSPlus NMEA test |
-| [v2_gnss_pps_test](./examples/v2_gnss_pps_test) | `GPS_EN` control-net diagnostic; no independent PPS input is assumed |
-| [v2_lora_test](./examples/v2_lora_test) | Standalone SX1262 receive-path test with IRQ polling |
-| [v2_lora_receive](./examples/v2_lora_receive) | Fixed-parameter SX1262 receive example |
-| [v2_lora_transmit](./examples/v2_lora_transmit) | Fixed-parameter SX1262 transmitter; sends a test payload every five seconds |
-| [v2_ble_test](./examples/v2_ble_test) | Nordic UART Service BLE test |
-| [v2_original_test](./examples/v2_original_test) | V1-compatible integrated menu and peripheral regression test |
+| [v2_lora_receive](./examples/v2_lora_receive) | Standalone fixed-parameter SX1262 receive example |
+| [v2_lora_test](./examples/v2_lora_test) | Standalone SX1262 receive-path diagnostic with IRQ polling |
+| [v2_lora_transmit](./examples/v2_lora_transmit) | Standalone fixed-parameter SX1262 transmitter; sends every five seconds |
+| [v2_main_i2c_test](./examples/v2_main_i2c_test) | Main-I2C line state, address scan, and error statistics |
+| [v2_motor_test](./examples/v2_motor_test) | Bounded 50 ms, 100 ms, and 150 ms motor pulses |
+| [v2_original_test](./examples/v2_original_test) | V1-compatible integrated menu and V2 peripheral regression test |
+| [v2_power_test](./examples/v2_power_test) | RT9080 3.3 V rail enable and GPIO read-back test |
+| [v2_screen_test](./examples/v2_screen_test) | Screen I2C line, address, and 128 x 64 display test |
+| [v2_sgm41562_test](./examples/v2_sgm41562_test) | SGM41562 device ID, configuration, fault, and status test |
+| [v2_ttp223_test](./examples/v2_ttp223_test) | TTP223 P0.15 baseline and debounced input test |
 
-Use `pio run -e <example_name>` to select a V2 sketch. The PlatformIO helper
-maps the selected environment to its matching `examples/<example_name>`
-directory, so the selected environment is not silently replaced by the
-default sketch.
+The v2_original_test LoRa window is receive-only. Use v2_lora_transmit with
+v2_lora_receive or v2_lora_test on another board to verify a two-device RF
+link.
 
-| Bootloader | Description | Picture |
-| ------  | ------  | ------ |
-| [bootloader](./bootloader/) |  |  |
+## Setup and flashing
 
-| Firmware | Description | Picture |
-| ------  | ------  | ------ |
-| [original_test](./firmware/[T-Impulse-Plus_V1.0][original_test(lora_freq_910mhz)]_firmware/)| Product factory original testing |  |
+### PlatformIO
 
-### IDE and Flashing
+The repository includes the custom LilyGo T-Impulse Plus nRF52840 board
+definition and registers one PlatformIO environment for each V2 example.
+Use an explicit environment name so the selected example is mapped to its
+matching examples/<name> directory:
 
-#### PlatformIO
-1. Install [VisualStudioCode](https://code.visualstudio.com/Download),choose installation based on your system type.
+    pio run -e v2_bringup
+    pio run -e v2_bringup -t upload
+    pio device monitor -e v2_bringup -b 115200
 
-2. Open the "Extension" section of the Visual Studio Code software sidebar (Alternatively, use "<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>" to open the extension). Search for the "PlatformIO IDE" extension and download it.
+Replace v2_bringup with any name in the V2 examples table. The helper script
+tools/platformio_select_example.py prevents the default source directory
+from silently replacing the selected environment.
 
-3. During the installation of the extension, you can go to GitHub to download the program. You can download the main branch by clicking on the "<> Code" with green text, or you can download the program versions from the "Releases" section in the sidebar.
+Install Visual Studio Code and the PlatformIO IDE extension, open this
+repository as the project folder, and select the included
+LilyGo T-Impulse Plus nRF52840 board. If the local board or framework setup
+needs repair, run the repository setup script:
 
-4. After the installation of the extension is completed, open the Explorer in the sidebar (Alternatively, use "<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>" go open it). Click on "Open Folder", locate the project code you just downloaded (the entire folder), and click "Add." At this point, the project files will be added to your workspace.
+    python "tool/win10 vscode platformio start/t_impulse_plus_setup.py"
 
-5. Open the "platformio.ini" file in the project folder (PlatformIO will automatically open the "platformio.ini" file corresponding to the added folder). Under the "[platformio]" section, uncomment and select the example program you want to burn (it should start with "default_envs = xxx") Then click "<kbd>[√](image/4.png)</kbd>" in the bottom left corner to compile. If the compilation is correct, connect the microcontroller to the computer and click "<kbd>[→](image/5.png)</kbd>" in the bottom left corner to download the program.
+The repository also includes static V2 contract checks. They inspect source
+and configuration only:
 
-6. At this point, an error may occur, and you need to install [Python](https://www.python.org/downloads/). Open the folder "tool" -> "win10 vscode platformio start" sequentially, and execute the cmd command `python t_impulse_plus_setup.py` under the "win10 vscode platformio start" folder. This will complete the development board installation, and the compilation and flashing will no longer report errors.
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\tests\verify_v2_hardware_config.ps1
 
-#### Arduino
+### Arduino IDE
 
-1. Install [Arduino](https://www.arduino.cc/en/software), and select the installation based on your system type.
+1. Install Arduino IDE and the Adafruit nRF52 board package.
+2. Run tool/win10 arduino ide start/t_impulse_plus_arduino_setup.py to install
+   the T-Impulse-Plus board variant and the required compiler library flags.
+3. Open an .ino file inside the selected examples/v2_* directory.
+4. Select LilyGo T-Impulse Plus nRF52840 and the correct USB port.
+5. Use a serial monitor at 115200 baud.
+6. To enter bootloader download mode, press and release RST, wait one second,
+   then press and release RST again. A new USB drive indicates bootloader mode.
 
-2. Open the "example" directory of the project folder, select the example project folder, and open the file ending with ".ino" to open the Arduino IDE project workspace.
+### J-Link
 
-3. Open the "Tools" menu bar at the top right -> Select "Board" -> "Board Manager", find or search for "Adafruit_nRF52", and download the board file with the author named "Adafruit". Then return to the "Board" menu bar, select the board type under the "Adafruit_nRF52" board, and the selected board type is determined by the "board = xxx" header under the [env] directory in the "platformio.ini" file. If there is no corresponding board, you need to manually add the board under the "board" directory in the project folder. (If "Adafruit_nRF52" cannot be found, you need to open Preferences -> Add `https://www.adafruit.com/package_adafruit_index.json` to "Additional Board Manager URLs")
-    
-4. Open the menu bar "[File](image/6.png)" -> "[Preferences](image/6.png)", find the "[Project Folder Location](image/7.png)" section, and copy and paste all the library files along with the folders in the "libraries" folder under the project directory into the "libraries" folder in this directory.
+The J-Link/SWD wiring image is [image/12.jpg](./image/12.jpg). Use
+nRF Connect for Desktop Programmer with the bootloader and firmware assets
+only when a prebuilt image is specifically required. The V2 examples are
+normally built and uploaded through PlatformIO or Arduino IDE.
 
-5. Close Arduino IDE, open `tool/win10 arduino ide start`, and run `python t_impulse_plus_arduino_setup.py`. The script detects installed Adafruit nRF52 versions, installs the T-Impulse-Plus board/variant, and creates or updates `platform.local.txt` with `compiler.libraries.ldflags=-lstdc++`. Follow the script prompt if multiple versions are installed, then restart Arduino IDE. See the README files in that tool directory for command-line options.
-    
-6. Select the correct settings in the "Tools" menu, as shown in the table below.
-    
-| Setting                               | Value                                 |
-| :-------------------------------: | :-------------------------------: |
-| Board                                 | LilyGo T-Impulse Plus nRF52840 |
+## Recommended validation order
 
-7. Select the correct port.
+1. Run v2_bringup first to confirm the tested integrated startup markers.
+2. Run v2_power_test and measure VDD3V3 externally.
+3. Run v2_screen_test and confirm the 0x3C display result.
+4. Run v2_flash_test and record JEDEC ID and capacity.
+5. Run v2_main_i2c_test, v2_sgm41562_test, and v2_icm20948_test.
+6. Run v2_battery_test and compare the calculated voltage with a multimeter.
+7. Run v2_motor_test and v2_ttp223_test separately.
+8. Run v2_gnss_uart_test, then v2_gnss_pps_test for GPS_EN control levels.
+9. Run v2_ble_test.
+10. Run v2_lora_receive or v2_lora_test, then run v2_lora_transmit on a
+    separate board with matching parameters.
+11. Run v2_original_test for the integrated menu and resource-handoff
+    regression.
 
-8. Entering Bootloader Download Mode: Press and release the RST (reset) chip button, wait for 1 second (this wait is essential), then press and release the RST button again. Once a new drive letter appears on the computer, it indicates that the device has successfully entered the bootloader download mode.
+### LoRa transmit and receive test
 
-9. Click the top right "[√](image/8.png)" to compile. If there are no errors, connect the microcontroller to the computer and click the top right "[→](image/9.png)" to start the flashing process.
+Flash v2_lora_receive to one board and v2_lora_transmit to another board.
+Start the receiver first. Both boards must use the parameters in the LoRa
+parameters table. The transmitter sends an ASCII test payload every five
+seconds and checks TX_DONE through SPI because DIO1 is on the shared P0.11
+net. The receiver reports the packet source, bytes, RSSI, SNR, and frequency
+error.
 
-#### JLINK Flashing Firmware and Bootloader
+Use an antenna, a suitable 50 ohm load, or an RF test fixture. Never connect
+a transmitter output directly to a receiver input. Do not run a main-I2C
+example in parallel with a standalone LoRa example on the same board.
 
-1.  Install the software [nRF-Connect-for-Desktop](https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-Desktop/Download#infotabs)
+## Legacy assets and project files
 
-2.  Install the software [JLINK](https://www.segger.com/downloads/jlink/)
-
-3.  Connect the JLINK pins correctly as shown in the figure below
-
-<p align="center" width="100%">
-    <img src="image/12.jpg" alt="">
-</p>
-
-4.  Open the software nRF-Connect-for-Desktop and install the tool [Programmer](./image/10.png) and open it
-
-5.  Add files, select both the bootloader file and the firmware file at the same time, click [Erase&write](./image/11.png), and the flashing will be completed.
-
-## PinOverview
-
-For pin definitions, please refer to the configuration file: 
-<br />
-
-[pin_config.h](./libraries/private_library/pin_config.h)
-
-## RelatedTests
-
-### Power Dissipation
-
-| Firmware | Software | Description | Picture |
-| ------  | ------  | ------ | ------ | 
-| [original_test](./firmware/[T-Impulse-Plus_V1.0][original_test(lora_freq_910mhz)]_firmware) | `original_test` | Minimum Power Consumption: 0.77μA <br /> For more information, please check the [Power Consumption Test Log](./relevant_test/PowerConsumptionTestLog_[T-Impulse-Plus]_20250825.pdf) | <p align="center"> <img src="image/13.jpg" alt="example" width="100%"> </p> |
+- [bootloader](./bootloader/) contains prebuilt bootloader images.
+- [firmware](./firmware/) contains legacy V1.0 factory and certification
+  images. These images are not the source for the V2 debug examples.
+- [V1 to V2 repair report](./docs/superpowers/T-Impulse%20Plus_V1_to_V2_repair_report.md)
+  records the pin, initialization, and shared-net decisions.
+- [V2 schematic](./project/T-Impulse%20Plus.pdf) is the hardware reference.
+- [libraries/private_library/pin_config.h](./libraries/private_library/pin_config.h)
+  is the software pin-map authority.
 
 ## FAQ
 
-* Q. After reading the above tutorials, I still don't know how to build a programming environment. What should I do?
-* A. If you still don't understand how to build an environment after reading the above tutorials, you can refer to the [LilyGo-Document](https://github.com/Xinyuan-LilyGO/LilyGo-Document) document instructions to build it.
+### Why is there no serial output?
 
-<br />
+Open the monitor at 115200 before resetting or reconnecting USB. Check USB
+CDC, VBUS, MCU power, reset, and the selected PlatformIO environment. The
+focused examples bound their USB wait; a late monitor connection can still
+miss the first startup lines.
 
-* Q. Why does Arduino IDE prompt me to update library files when I open it? Should I update them or not?
-* A. Choose not to update library files. Different versions of library files may not be mutually compatible, so it is not recommended to update library files.
+### Why does the LoRa receiver get no packet?
 
-<br />
+Use the same frequency, bandwidth, spreading factor, coding rate, sync word,
+preamble, CRC setting, and antenna/load at both ends. The V2 defaults are
+868.0 MHz, 125 kHz, SF10, CR4/6, sync 0xAB, preamble 15, and CRC disabled.
+Also make sure the receiver is a V2-compatible example and that main I2C is
+released before radio startup.
 
-* Q. Why is there no debug information output from my board's USB?
-* A. Please enable the "DTR" option in your serial assistant software.
+### Is GPS_1PPS available on V2?
 
-<br />
+No independent PPS input is defined in the current pin map. GPS_1PPS is a
+legacy alias for GPS_EN=P0.24. Use v2_gnss_pps_test only to check the
+GPS_EN control net and measure GPS_VDD externally.
 
-*   Q. Why does the board always fail to program when I directly use USB?
-*   A. Please press and release the RST (reset) chip button, wait for 1 second (this wait is essential), then press and release the RST button again. Once a new drive letter appears on the computer, it indicates that the device has entered the bootloader download mode, and programming can now proceed.
+### Why does the battery voltage look wrong?
 
-<br />
+The divider switch is P0.17 and the ADC is P0.05. The battery example uses a
+3.0 V internal reference, 12-bit ADC, and a scale factor of 2.0. Confirm the
+divider and battery terminal with a multimeter; software output is not an
+instrument measurement.
 
-## Project
-* [T-Impulse-Plus_V1.0](./project/T-Impulse-Plus_V1.0.pdf)
+### Why does direct USB programming fail?
+
+Press and release RST, wait one second, and press and release RST again. When
+the new USB drive appears, select the correct port and upload again.
