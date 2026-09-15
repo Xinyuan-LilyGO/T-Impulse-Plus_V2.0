@@ -22,7 +22,7 @@ v2_bringup 是已经测试过的 V2 初始化顺序参考程序。其余 v2_* �
 
 | 基线 | 状态 | 范围 |
 | --- | --- | --- |
-| V2 硬件调试例程 | 当前使用 | 17 个单点或综合 PlatformIO 环境 |
+| V2 硬件调试例程 | 当前使用 | 15 个单点或综合 PlatformIO 环境 |
 
 ## 产品信息
 
@@ -206,29 +206,6 @@ SPI 外设和射频引脚，再恢复主 I2C。
 | TCXO | 3.0 V |
 | 稳压器 | DC-DC |
 
-## 参考初始化顺序
-
-v2_bringup 是当前 V2 实际启动和外设资源切换顺序的参考：
-
-1. 先以 115200 启动 Serial。
-2. 对 RT9080_EN=P0.19 执行 HIGH -> LOW -> HIGH，每次切换间隔约 100 ms。
-3. 配置屏幕 Wire1 的 P1.06/P1.04，在 0x3C 初始化屏幕，绘制启动画面并
-   等待约 1 秒。
-4. 在屏幕初始化后等待有限时间的原生 USB CDC，然后输出版本标识和诊断日志。
-5. 将 TTP223 P0.15 配置为输入，保持 GPS_EN=P0.24 为 HIGH，并将马达
-   P0.22 拉 LOW。
-6. 初始化 BLE，然后初始化 SGM41562。
-7. 以 32 MHz 访问 QSPI Flash：启动传输，发送 0xAB 退出深度睡眠，再次
-   begin 读取 JEDEC ID/容量，发送 0xB9，调用 flash.end()，最后释放 6 个
-   QSPI 引脚。
-8. 配置 P1.08/P0.11 主 I2C，在 0x69 初始化 ICM20948。综合程序随后按当前
-   应用状态让 IMU 休眠并释放其引脚。
-9. 正常启动阶段不初始化 LoRa。进入 LoRa 窗口时，先结束主 I2C 并释放
-   P0.11，再启动 NRF_SPIM3 和 SX1262。
-10. 进入 GNSS 窗口时，将 Serial2 配置到 P0.02/P1.15 并以 38400 启动，
-    之后将 GPS_EN 拉 LOW 才读取 GNSS 数据。退出时停止 Serial2 并将
-    GPS_EN 恢复 HIGH。
-
 ## V2 例程
 
 每个当前例程目录都包含 README.md，记录串口操作、正常现象和故障判断。
@@ -243,12 +220,10 @@ v2_bringup 是当前 V2 实际启动和外设资源切换顺序的参考：
 | [v2_gnss_uart_test](./examples/v2_gnss_uart_test) | 38400 波特率 GNSS UART 和 TinyGPSPlus NMEA 测试 |
 | [v2_icm20948_test](./examples/v2_icm20948_test) | ICM20948 加速度计、陀螺仪和磁力计测试 |
 | [v2_lora_receive](./examples/v2_lora_receive) | 固定参数的独立 SX1262 接收例程 |
-| [v2_lora_test](./examples/v2_lora_test) | 带 IRQ 轮询的独立 SX1262 接收路径诊断 |
 | [v2_lora_transmit](./examples/v2_lora_transmit) | 固定参数的独立 SX1262 发射例程，每 5 秒发送一次 |
 | [v2_main_i2c_test](./examples/v2_main_i2c_test) | 主 I2C 线路状态、地址扫描和错误统计 |
 | [v2_motor_test](./examples/v2_motor_test) | 50 ms、100 ms、150 ms 有界马达脉冲测试 |
 | [v2_original_test](./examples/v2_original_test) | V1 兼容的综合菜单和 V2 外设回归测试 |
-| [v2_power_test](./examples/v2_power_test) | RT9080 3.3 V 电源轨使能和 GPIO 回读测试 |
 | [v2_screen_test](./examples/v2_screen_test) | 屏幕 I2C 线路、地址和 128 x 64 显示测试 |
 | [v2_sgm41562_test](./examples/v2_sgm41562_test) | SGM41562 设备 ID、配置、故障和状态测试 |
 | [v2_ttp223_test](./examples/v2_ttp223_test) | TTP223 P0.15 基线和消抖输入测试 |
@@ -339,3 +314,11 @@ USB CDC、VBUS、MCU 电源、复位和选中的 PlatformIO 环境。单点例�
 
 按下并松开 RST，等待 1 秒，再按下并松开 RST。电脑出现新的 USB 磁盘后，
 选择正确端口并重新上传。
+
+## 电池寿命预估
+已知设备的平均电流消耗和电池的容量，计算电池寿命。以下是不同能量容量电池的电池寿命计算实例:
+
+例1：
+设备的平均电流消耗 :20uA
+电池容量:220mAh (标准CR2032纽扣电池 )
+电池寿命:0.22Ah/0.00002A=11000hours=458days
