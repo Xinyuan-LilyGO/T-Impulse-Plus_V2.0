@@ -6,11 +6,7 @@
  * @License: GPL 3.0
 -->
 
-<h1 align="center">T-Impulse-Plus</h1>
-
-<p align="center" width="100%">
-    <img src="image/3.jpg" alt="T-Impulse-Plus">
-</p>
+<h1 align="center">T-Impulse-Plus V2.0</h1>
 
 ## [English](./README.md) | 中文
 
@@ -26,14 +22,13 @@ v2_bringup 是已经测试过的 V2 初始化顺序参考程序。其余 v2_* �
 
 | 基线 | 状态 | 范围 |
 | --- | --- | --- |
-| V2 硬件调试例程 | 当前使用 | 17 个单点或综合 PlatformIO 环境 |
-| T-Impulse-Plus V1.0 固件和 bootloader 文件 | 旧版/参考 | 保留在 firmware/ 和 bootloader/ 下的预编译文件 |
+| V2 硬件调试例程 | 当前使用 | 15 个单点或综合 PlatformIO 环境 |
 
 ## 产品信息
 
 | 产品 | MCU | Flash | RAM | 购买链接 |
 | --- | --- | --- | --- | --- |
-| T-Impulse-Plus | nRF52840 | 1 MB | 256 KB | 暂无 |
+| T-Impulse-Plus V2| nRF52840 | 1 MB | 256 KB | 暂无 |
 
 ## 目录
 
@@ -50,7 +45,7 @@ v2_bringup 是已经测试过的 V2 初始化顺序参考程序。其余 v2_* �
 
 ## 概述
 
-T-Impulse-Plus 是一款基于 nRF52840 的低功耗手环，板载 OLED 屏幕、
+T-Impulse-Plus V2 是一款基于 nRF52840 的低功耗手环，板载 OLED 屏幕、
 SX1262 LoRa 射频模块、MIA-M10Q GNSS 模块、ICM20948 惯性传感器、
 QSPI Flash、TTP223 触摸输入、SGM41562 电源管理芯片，以及由 RT9080
 控制的 3.3 V 电源轨。
@@ -77,7 +72,7 @@ QSPI Flash、TTP223 触摸输入、SGM41562 电源管理芯片，以及由 RT908
 ### 屏幕
 
 - 类型：SSD1315 兼容 OLED
-- 分辨率：128 x 64
+- 分辨率：64 x 32
 - 总线：屏幕 I2C，使用 Wire1
 - 地址：0x3C
 - 引脚：SDA=P1.06，SCL=P1.04
@@ -211,33 +206,6 @@ SPI 外设和射频引脚，再恢复主 I2C。
 | TCXO | 3.0 V |
 | 稳压器 | DC-DC |
 
-V1 的 SX126x_PingPong 参考例程使用 868.6 MHz、SF9 和前导码 16，因此
-不直接兼容 V2 默认值，除非两端一起修改。T-Deck-MAX 例程属于另一块
-硬件，其引脚和射频参数不能作为 V2 参考。
-
-## 参考初始化顺序
-
-v2_bringup 是当前 V2 实际启动和外设资源切换顺序的参考：
-
-1. 先以 115200 启动 Serial。
-2. 对 RT9080_EN=P0.19 执行 HIGH -> LOW -> HIGH，每次切换间隔约 100 ms。
-3. 配置屏幕 Wire1 的 P1.06/P1.04，在 0x3C 初始化屏幕，绘制启动画面并
-   等待约 1 秒。
-4. 在屏幕初始化后等待有限时间的原生 USB CDC，然后输出版本标识和诊断日志。
-5. 将 TTP223 P0.15 配置为输入，保持 GPS_EN=P0.24 为 HIGH，并将马达
-   P0.22 拉 LOW。
-6. 初始化 BLE，然后初始化 SGM41562。
-7. 以 32 MHz 访问 QSPI Flash：启动传输，发送 0xAB 退出深度睡眠，再次
-   begin 读取 JEDEC ID/容量，发送 0xB9，调用 flash.end()，最后释放 6 个
-   QSPI 引脚。
-8. 配置 P1.08/P0.11 主 I2C，在 0x69 初始化 ICM20948。综合程序随后按当前
-   应用状态让 IMU 休眠并释放其引脚。
-9. 正常启动阶段不初始化 LoRa。进入 LoRa 窗口时，先结束主 I2C 并释放
-   P0.11，再启动 NRF_SPIM3 和 SX1262。
-10. 进入 GNSS 窗口时，将 Serial2 配置到 P0.02/P1.15 并以 38400 启动，
-    之后将 GPS_EN 拉 LOW 才读取 GNSS 数据。退出时停止 Serial2 并将
-    GPS_EN 恢复 HIGH。
-
 ## V2 例程
 
 每个当前例程目录都包含 README.md，记录串口操作、正常现象和故障判断。
@@ -252,12 +220,10 @@ v2_bringup 是当前 V2 实际启动和外设资源切换顺序的参考：
 | [v2_gnss_uart_test](./examples/v2_gnss_uart_test) | 38400 波特率 GNSS UART 和 TinyGPSPlus NMEA 测试 |
 | [v2_icm20948_test](./examples/v2_icm20948_test) | ICM20948 加速度计、陀螺仪和磁力计测试 |
 | [v2_lora_receive](./examples/v2_lora_receive) | 固定参数的独立 SX1262 接收例程 |
-| [v2_lora_test](./examples/v2_lora_test) | 带 IRQ 轮询的独立 SX1262 接收路径诊断 |
 | [v2_lora_transmit](./examples/v2_lora_transmit) | 固定参数的独立 SX1262 发射例程，每 5 秒发送一次 |
 | [v2_main_i2c_test](./examples/v2_main_i2c_test) | 主 I2C 线路状态、地址扫描和错误统计 |
 | [v2_motor_test](./examples/v2_motor_test) | 50 ms、100 ms、150 ms 有界马达脉冲测试 |
 | [v2_original_test](./examples/v2_original_test) | V1 兼容的综合菜单和 V2 外设回归测试 |
-| [v2_power_test](./examples/v2_power_test) | RT9080 3.3 V 电源轨使能和 GPIO 回读测试 |
 | [v2_screen_test](./examples/v2_screen_test) | 屏幕 I2C 线路、地址和 128 x 64 显示测试 |
 | [v2_sgm41562_test](./examples/v2_sgm41562_test) | SGM41562 设备 ID、配置、故障和状态测试 |
 | [v2_ttp223_test](./examples/v2_ttp223_test) | TTP223 P0.15 基线和消抖输入测试 |
@@ -335,45 +301,24 @@ v2_lora_transmit，先启动接收端。两块板必须使用 LoRa 参数表中�
 直接连接到接收端输入。同一块板上不要让主 I2C 例程与独立 LoRa 例程并行
 运行。
 
-## 旧版文件与工程资料
-
-- [bootloader](./bootloader/)：预编译 bootloader 镜像。
-- [firmware](./firmware/)：旧版 V1.0 出厂和认证镜像，不是 V2 调试例程的
-  当前源码。
-- [V1 到 V2 修复报告](./docs/superpowers/T-Impulse%20Plus_V1_to_V2_repair_report.md)：
-  记录引脚、初始化顺序和共线网络的判断。
-- [V2 原理图](./project/T-Impulse%20Plus.pdf)：硬件参考。
-- [libraries/private_library/pin_config.h](./libraries/private_library/pin_config.h)：
-  软件引脚定义权威文件。
-
 ## 常见问题
 
 ### 为什么没有串口输出？
 
+请打开串口助手软件中的“DTR”选项
 以 115200 打开串口监视器，并在复位或重新连接 USB 前先打开监视器。检查
 USB CDC、VBUS、MCU 电源、复位和选中的 PlatformIO 环境。单点例程的 USB
 等待是有限的，监视器打开过晚仍可能错过最初几行日志。
-
-### 为什么 LoRa 接收不到数据？
-
-确认两端的频率、带宽、扩频因子、编码率、同步字、前导码、CRC 设置和
-天线/负载全部一致。V2 默认值是 868.0 MHz、125 kHz、SF10、CR4/6、
-同步字 0xAB、前导码 15、关闭 CRC。还要确认接收端使用 V2 兼容例程，
-并且启动射频前已经释放主 I2C。
-
-### V2 有 GPS_1PPS 吗？
-
-当前引脚图没有独立 PPS 输入。GPS_1PPS 只是 GPS_EN=P0.24 的历史别名。
-v2_gnss_pps_test 只能用于检查 GPS_EN 控制网络，GPS_VDD 需要使用外部
-仪器测量。
-
-### 为什么电池电压不正确？
-
-分压开关控制脚是 P0.17，ADC 是 P0.05。电池例程使用 3.0 V 内部参考、
-12 位 ADC 和 2.0 倍换算系数。请检查分压网络和电池端电压，并使用万用表
-进行对照；软件日志不能替代仪器测量。
 
 ### 为什么直接用 USB 烧录失败？
 
 按下并松开 RST，等待 1 秒，再按下并松开 RST。电脑出现新的 USB 磁盘后，
 选择正确端口并重新上传。
+
+## 电池寿命预估
+已知设备的平均电流消耗和电池的容量，计算电池寿命。以下是不同能量容量电池的电池寿命计算实例:
+
+例1：
+设备的平均电流消耗 :20uA
+电池容量:220mAh (标准CR2032纽扣电池 )
+电池寿命:0.22Ah/0.00002A=11000hours=458days
