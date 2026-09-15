@@ -24,7 +24,7 @@ GNSS power.
 
 | Baseline | Status | Scope |
 | --- | --- | --- |
-| V2 hardware debug examples | Current | 17 focused or integrated PlatformIO environments |
+| V2 hardware debug examples | Current | 15 focused or integrated PlatformIO environments |
 
 ## Product information
 
@@ -255,12 +255,10 @@ procedure, expected behavior, and failure diagnosis.
 | [v2_gnss_uart_test](./examples/v2_gnss_uart_test) | 38400-baud GNSS UART and TinyGPSPlus NMEA test |
 | [v2_icm20948_test](./examples/v2_icm20948_test) | ICM20948 accelerometer, gyroscope, and magnetometer test |
 | [v2_lora_receive](./examples/v2_lora_receive) | Standalone fixed-parameter SX1262 receive example |
-| [v2_lora_test](./examples/v2_lora_test) | Standalone SX1262 receive-path diagnostic with IRQ polling |
 | [v2_lora_transmit](./examples/v2_lora_transmit) | Standalone fixed-parameter SX1262 transmitter; sends every five seconds |
 | [v2_main_i2c_test](./examples/v2_main_i2c_test) | Main-I2C line state, address scan, and error statistics |
 | [v2_motor_test](./examples/v2_motor_test) | Bounded 50 ms, 100 ms, and 150 ms motor pulses |
 | [v2_original_test](./examples/v2_original_test) | V1-compatible integrated menu and V2 peripheral regression test |
-| [v2_power_test](./examples/v2_power_test) | RT9080 3.3 V rail enable and GPIO read-back test |
 | [v2_screen_test](./examples/v2_screen_test) | Screen I2C line, address, and 128 x 64 display test |
 | [v2_sgm41562_test](./examples/v2_sgm41562_test) | SGM41562 device ID, configuration, fault, and status test |
 | [v2_ttp223_test](./examples/v2_ttp223_test) | TTP223 P0.15 baseline and debounced input test |
@@ -360,3 +358,10 @@ miss the first startup lines.
 
 Press and release RST, wait one second, and press and release RST again. When
 the new USB drive appears, select the correct port and upload again.
+
+## Battery Life Estimation
+Calculate battery life given the device's average current consumption and battery capacity. Below are examples of battery life calculation for batteries with different energy capacities:
+Example 1:
+Average current consumption of the device: 20uA
+Battery capacity: 220mAh (standard CR2032 coin cell battery)
+Battery life: 0.22Ah/0.00002A=11000hours=458days
