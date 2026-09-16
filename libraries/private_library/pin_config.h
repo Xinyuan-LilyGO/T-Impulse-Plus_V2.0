@@ -67,6 +67,9 @@
 #define SX1262_RF_VC1 _PINNUM(1, 13)
 #define SX1262_RF_VC2 _PINNUM(1, 10)
 
+// Board-level SPDT antenna switch: HIGH selects the internal LoRa antenna path.
+#define LORA_ANTENNA_SPDT_VCTL _PINNUM(1, 7)
+
 // The S62F uses the built-in 32 MHz TCXO, powered at 3.0 V through SX1262
 // DIO3. VREG and DCC_SW are connected through a 15 uH inductor, so use the
 // SX1262 DC-DC regulator mode instead of forcing pure LDO mode.
@@ -101,6 +104,5 @@
 #define SGM41562_SDA IIC_SDA_1
 #define SGM41562_SCL IIC_SCL_1
 #define SGM41562_INT _PINNUM(0, 16)
-
 // vibrate
 #define VIBRATION_MOTOR_DATA _PINNUM(0, 22)

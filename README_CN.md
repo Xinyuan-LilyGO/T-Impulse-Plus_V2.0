@@ -22,17 +22,20 @@ v2_bringup 是已经测试过的 V2 初始化顺序参考程序。其余 v2_* �
 
 | 基线 | 状态 | 范围 |
 | --- | --- | --- |
-| V2 硬件调试例程 | 当前使用 | 15 个单点或综合 PlatformIO 环境 |
+| V2 硬件调试例程 | 当前使用 | 16 个单点或综合 PlatformIO 环境 |
 
 ## 产品信息
 
 | 产品 | MCU | Flash | RAM | 购买链接 |
 | --- | --- | --- | --- | --- |
-| T-Impulse-Plus V2| nRF52840 | 1 MB | 256 KB | 暂无 |
+| T-Impulse-Plus V2 | nRF52840 | 1 MB | 256 KB | 暂无 |
 
 ## 目录
 
+- [产品信息](#产品信息)
 - [概述](#概述)
+- [预览](#预览)
+- [功耗对比](#功耗对比)
 - [硬件模块](#硬件模块)
 - [V2 硬件引脚](#v2-硬件引脚)
 - [LoRa 参数](#lora-参数)
@@ -40,8 +43,8 @@ v2_bringup 是已经测试过的 V2 初始化顺序参考程序。其余 v2_* �
 - [V2 例程](#v2-例程)
 - [环境安装与烧录](#环境安装与烧录)
 - [推荐验证顺序](#推荐验证顺序)
-- [旧版文件与工程资料](#旧版文件与工程资料)
 - [常见问题](#常见问题)
+- [电池寿命预估](#电池寿命预估)
 
 ## 概述
 
@@ -56,8 +59,22 @@ QSPI Flash、TTP223 触摸输入、SGM41562 电源管理芯片，以及由 RT908
 
 ## 预览
 
-<p align="center" width="100%">
-    <img src="image/3.jpg" alt="T-Impulse-Plus 开发板">
+<p align="center">
+    <img src="./image/3.jpg" alt="T-Impulse-Plus 开发板" width="48%">
+    <img src="./image/product_preview_2.jpg" alt="T-Impulse-Plus 开发板细节" width="48%">
+</p>
+
+## 功耗对比
+
+与 V1 硬件相比，V2 硬件的 3.3 V 电源路径采用 DC-DC 稳压。在相同工作
+状态、测试条件和测量方法下，V2 硬件的功耗约降低一半。实际结果会受到
+电池电压、负载、工作模式、USB 连接状态和测量位置影响，下面两个报告为
+当前功耗对比记录，分别记录 V1 和 V2 的功耗测试结果。
+
+<p align="center">
+    <a href="./relevant_test/PowerConsumptionTestLog_%5BT-Impulse-Plus%5D_20250825.pdf">V1 功耗测试报告（PDF）</a>
+    &nbsp;&nbsp;&nbsp;
+    <a href="./relevant_test/PowerConsumptionTestLog_%5BT-Impulse-PlusV2%5D_20260916.pdf">V2 功耗测试报告（PDF）</a>
 </p>
 
 ## 硬件模块
@@ -139,7 +156,6 @@ V2 当前没有在这个网络上定义独立 PPS 输入。
 - 充电/电源管理芯片：SGM41562
 - SGM41562 地址：0x03
 - SGM41562 主 I2C：SDA=P1.08，SCL=P0.11
-- SGM41562 中断：P0.16
 - 3.3 V 电源轨使能：RT9080_EN=P0.19
 - 电池分压开关控制：P0.17
 - 电池 ADC：P0.05
@@ -176,7 +192,6 @@ V2 当前没有在这个网络上定义独立 PPS 输入。
 | GNSS 模块 RX 网络 | P1.15 | Serial2 的模块 RX 侧 |
 | GPS_EN | P0.24 | GPS_1PPS 只是历史兼容别名 |
 | ICM20948 中断 | P0.07 | |
-| SGM41562 中断 | P0.16 | |
 | TTP223 Q | P0.15 | |
 | 振动马达 | P0.22 | 高电平脉冲输出 |
 | RT9080 使能 | P0.19 | |
@@ -221,6 +236,7 @@ SPI 外设和射频引脚，再恢复主 I2C。
 | [v2_icm20948_test](./examples/v2_icm20948_test) | ICM20948 加速度计、陀螺仪和磁力计测试 |
 | [v2_lora_receive](./examples/v2_lora_receive) | 固定参数的独立 SX1262 接收例程 |
 | [v2_lora_transmit](./examples/v2_lora_transmit) | 固定参数的独立 SX1262 发射例程，每 5 秒发送一次 |
+| [v2_lora_external_antenna_transmit](./examples/v2_lora_external_antenna_transmit) | SPDT 天线切换测试，P1.07 置 HIGH 后使用内置 LoRa 天线发射 |
 | [v2_main_i2c_test](./examples/v2_main_i2c_test) | 主 I2C 线路状态、地址扫描和错误统计 |
 | [v2_motor_test](./examples/v2_motor_test) | 50 ms、100 ms、150 ms 有界马达脉冲测试 |
 | [v2_original_test](./examples/v2_original_test) | V1 兼容的综合菜单和 V2 外设回归测试 |

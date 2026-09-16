@@ -24,7 +24,7 @@ GNSS power.
 
 | Baseline | Status | Scope |
 | --- | --- | --- |
-| V2 hardware debug examples | Current | 15 focused or integrated PlatformIO environments |
+| V2 hardware debug examples | Current | 16 focused or integrated PlatformIO environments |
 
 ## Product information
 
@@ -34,7 +34,10 @@ GNSS power.
 
 ## Contents
 
+- [Product information](#product-information)
 - [Overview](#overview)
+- [Preview](#preview)
+- [Power consumption comparison](#power-consumption-comparison)
 - [Hardware modules](#hardware-modules)
 - [V2 hardware pin map](#v2-hardware-pin-map)
 - [LoRa parameters](#lora-parameters)
@@ -42,8 +45,8 @@ GNSS power.
 - [V2 examples](#v2-examples)
 - [Setup and flashing](#setup-and-flashing)
 - [Recommended validation order](#recommended-validation-order)
-- [Legacy assets and project files](#legacy-assets-and-project-files)
 - [FAQ](#faq)
+- [Battery Life Estimation](#battery-life-estimation)
 
 ## Overview
 
@@ -58,8 +61,24 @@ uses the V2 hardware definition and the V2 resource-ownership rules.
 
 ## Preview
 
-<p align="center" width="100%">
-    <img src="image/3.jpg" alt="T-Impulse-Plus board">
+<p align="center">
+    <img src="./image/3.jpg" alt="T-Impulse-Plus board" width="48%">
+    <img src="./image/product_preview_2.jpg" alt="T-Impulse-Plus board detail" width="48%">
+</p>
+
+## Power consumption comparison
+
+Compared with the V1 hardware, the V2 power path uses a DC-DC converter for
+the 3.3 V rail. Under the same operating state, measurement conditions, and
+test method, the V2 hardware reduces power consumption by approximately half
+compared with V1. Actual results depend on battery voltage, load, operating
+mode, USB connection, and measurement point; the two reports below show the
+current comparison and contain the V1 and V2 power measurements.
+
+<p align="center">
+    <a href="./relevant_test/PowerConsumptionTestLog_%5BT-Impulse-Plus%5D_20250825.pdf">V1 power consumption report (PDF)</a>
+    &nbsp;&nbsp;&nbsp;
+    <a href="./relevant_test/PowerConsumptionTestLog_%5BT-Impulse-PlusV2%5D_20260916.pdf">V2 power consumption report (PDF)</a>
 </p>
 
 ## Hardware modules
@@ -145,7 +164,6 @@ independent PPS input on this net.
 - Charger/power-management IC: SGM41562
 - SGM41562 address: 0x03
 - SGM41562 main-I2C pins: SDA=P1.08, SCL=P0.11
-- SGM41562 interrupt: P0.16
 - 3.3 V rail enable: RT9080_EN=P0.19
 - Battery-divider switch control: P0.17
 - Battery ADC: P0.05
@@ -182,7 +200,6 @@ The schematic is available at
 | GNSS module RX net | P1.15 | Used as the module RX side of Serial2 |
 | GPS_EN | P0.24 | GPS_1PPS is only a legacy alias |
 | ICM20948 interrupt | P0.07 | |
-| SGM41562 interrupt | P0.16 | |
 | TTP223 Q | P0.15 | |
 | Vibration motor | P0.22 | Active-high pulse output |
 | RT9080 enable | P0.19 | |
@@ -213,33 +230,6 @@ Use identical parameters on the transmitter and receiver:
 | TCXO | 3.0 V |
 | Regulator | DC-DC |
 
-## Reference initialization order
-
-v2_bringup is the reference for the real V2 startup and peripheral handoff
-order:
-
-1. Start Serial at 115200.
-2. Enable RT9080_EN=P0.19 with HIGH -> LOW -> HIGH transitions and about
-   100 ms between transitions.
-3. Configure screen Wire1 on P1.06/P1.04 and initialize the display at 0x3C.
-   Draw the startup screen and wait about one second.
-4. Wait for native USB CDC for a bounded interval, then print the version
-   banner and diagnostics.
-5. Set TTP223 P0.15 as an input, keep GPS_EN=P0.24 HIGH, and drive the motor
-   P0.22 LOW.
-6. Initialize BLE, then initialize SGM41562.
-7. Access QSPI Flash at 32 MHz: begin transport, send 0xAB to exit deep
-   sleep, begin again to read JEDEC ID/capacity, send 0xB9, call flash.end(),
-   and release all six QSPI pins.
-8. Configure main I2C on P1.08/P0.11 and initialize ICM20948 at 0x69. The
-   integrated setup then puts the IMU to sleep and releases its pins as
-   required by the current application state.
-9. Do not initialize LoRa during normal startup. In the LoRa window, end
-   main I2C and release P0.11 before starting NRF_SPIM3 and SX1262.
-10. In the GNSS window, configure Serial2 on P0.02/P1.15 at 38400 baud and
-    drive GPS_EN LOW before reading GNSS data. On exit, stop Serial2 and
-    return GPS_EN HIGH.
-
 ## V2 examples
 
 Every current example directory contains its own README.md with serial
@@ -256,6 +246,7 @@ procedure, expected behavior, and failure diagnosis.
 | [v2_icm20948_test](./examples/v2_icm20948_test) | ICM20948 accelerometer, gyroscope, and magnetometer test |
 | [v2_lora_receive](./examples/v2_lora_receive) | Standalone fixed-parameter SX1262 receive example |
 | [v2_lora_transmit](./examples/v2_lora_transmit) | Standalone fixed-parameter SX1262 transmitter; sends every five seconds |
+| [v2_lora_external_antenna_transmit](./examples/v2_lora_external_antenna_transmit) | SX1262 antenna-switch test with P1.07 HIGH selecting the internal LoRa antenna |
 | [v2_main_i2c_test](./examples/v2_main_i2c_test) | Main-I2C line state, address scan, and error statistics |
 | [v2_motor_test](./examples/v2_motor_test) | Bounded 50 ms, 100 ms, and 150 ms motor pulses |
 | [v2_original_test](./examples/v2_original_test) | V1-compatible integrated menu and V2 peripheral regression test |

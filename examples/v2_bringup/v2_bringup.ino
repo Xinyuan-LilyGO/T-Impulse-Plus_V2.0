@@ -224,6 +224,47 @@ auto sgm41562_i2c_bus = std::make_shared<cpp_bus_driver::HardwareI2c2>(
 auto sgm41562 = std::make_unique<cpp_bus_driver::Sgm41562xx>(
     sgm41562_i2c_bus, SGM41562_ADDRESS);
 
+static constexpr uint8_t kSgm41562RegPowerOnConfiguration = 0x01;
+static constexpr uint8_t kSgm41562ResetTimingMask = 0xE0;
+static constexpr uint8_t kSgm41562ResetTimingValue = 0x00;
+
+void log_printf(const char *fmt, ...);
+
+bool Configure_Sgm41562_Reset_Timing(void)
+{
+    uint8_t reg01 = 0;
+    if (!sgm41562_i2c_bus->WriteRead(
+            &kSgm41562RegPowerOnConfiguration, 1, &reg01, 1))
+    {
+        log_printf("Sgm41562 reset timing read fail\n");
+        return false;
+    }
+
+    reg01 = (reg01 & static_cast<uint8_t>(~kSgm41562ResetTimingMask)) |
+            kSgm41562ResetTimingValue;
+    const uint8_t write_data[] = {
+        kSgm41562RegPowerOnConfiguration,
+        reg01,
+    };
+    if (!sgm41562_i2c_bus->Write(write_data, sizeof(write_data)))
+    {
+        log_printf("Sgm41562 reset timing write fail\n");
+        return false;
+    }
+
+    uint8_t verified_reg01 = 0;
+    if (!sgm41562_i2c_bus->WriteRead(
+            &kSgm41562RegPowerOnConfiguration, 1, &verified_reg01, 1) ||
+        (verified_reg01 & kSgm41562ResetTimingMask) !=
+            kSgm41562ResetTimingValue)
+    {
+        log_printf("Sgm41562 reset timing verify fail\n");
+        return false;
+    }
+
+    return true;
+}
+
 void P011_InitializeAsI2C(void)
 {
     // Release the radio interrupt before assigning P0.11 back to TWIM.
@@ -563,6 +604,10 @@ void Window_Init(System_Window Window)
         else
         {
             log_printf("Sgm41562 init successful\n");
+            if (!Configure_Sgm41562_Reset_Timing())
+            {
+                log_printf("Sgm41562 reset timing set fail\n");
+            }
         }
 
         // Measure battery
@@ -955,6 +1000,11 @@ void System_Sleep(bool mode)
         {
             log_printf("Sgm41562 init successful\n");
 
+            if (!Configure_Sgm41562_Reset_Timing())
+            {
+                log_printf("Sgm41562 reset timing set fail\n");
+            }
+
             if (!sgm41562->SetShippingModeDelay(
                     cpp_bus_driver::Sgm41562xx::ShippingModeDelay::k1Second))
             {
@@ -993,13 +1043,12 @@ void Enter_System_Off_No_Wake(void)
     // TTP223 is powered from the switched rail and is not a power-off wake
     // source; keeping its active-low sense enabled also adds leakage.
     nrf_gpio_cfg_default(TTP223_KEY);
-    nrf_gpio_cfg_default(SGM41562_INT);
     nrf_gpio_cfg_default(ICM20948_INT);
     nrf_gpio_cfg_default(GPS_1PPS);
     nrf_gpio_cfg_default(SX1262_DIO1);
     nrf_gpio_cfg_default(SX1262_DIO2);
     nrf_gpio_cfg_default(SX1262_BUSY);
-
+     nrf_gpio_cfg_default(SGM41562_INT);
     // No wake source is configured. Match the Arduino core's System OFF
     // entry: SoftDevice must use its supervisor call, while a standalone
     // nRF52840 can write the POWER register directly.
@@ -1102,6 +1151,11 @@ void setup()
     else
     {
         log_printf("Sgm41562 init successful\n");
+
+        if (!Configure_Sgm41562_Reset_Timing())
+        {
+            log_printf("Sgm41562 reset timing set fail\n");
+        }
 
         if (!sgm41562->SetShippingModeDelay(
                 cpp_bus_driver::Sgm41562xx::ShippingModeDelay::k1Second))
